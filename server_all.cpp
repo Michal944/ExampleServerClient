@@ -9,8 +9,8 @@
 #include <arpa/inet.h>
 
 using namespace std;
-
-#define PORT 5500
+typedef socklen_t slen;
+#define PORT 50011
 
 class Server
 {
@@ -26,15 +26,45 @@ class Server
   int DescL;
   int DescC;
   
-  char buffor[256];
-  int  Size_Msg;
-//  int  yes = 1;
- socklen_t AddrLen;
+  string text;
+  
+  char buffor[32];
+  slen AddrLen;
   int  NrDesc, NrDescSEND;
   void SetAddr();
   void Settime();
   void Init();
 };
+
+int Sendall(const int& Socket, char *Message, const int& SizeM)
+{
+  uint16_t sendedB=0;
+  uint16_t Bytetosend = SizeM;
+  int n;
+
+  while(sendedB < SizeM)
+  { 
+    n = send(Socket, (Message + sendedB), Bytetosend, 0);
+    if(n== -1) return -1;
+    sendedB     += n;
+    Bytetosend  -= n;  
+  }
+  
+  return (sendedB == SizeM); 
+}
+int Recvall(const int& _SockT, string& _mg)
+{
+  char Re[1];
+  int R;
+  while(1)
+  {
+    R=recv(_SockT, Re, 1,0);
+    _mg.append(Re,1);
+    if(Re[0] == '\0' || R == -1)
+      break;
+  }
+  return R;
+}
 
 void Server::Settime()
 {
@@ -88,28 +118,29 @@ void Server::Init()
         }
         else
         {
-          if( (Size_Msg = recv(NrDesc, buffor, sizeof(buffor)-1, 0)
-              )  <= 0)
+          if( Recvall(NrDesc, text) <= 0)
           {
             close(NrDesc);
             FD_CLR(NrDesc, &master);
           }
           else
           {
-            /*
-            buffor[255] = '\0';
-            cout<<buffor<<endl;
+            
+            buffor[31] = '\0';
+            cout<<text<<endl;
             bzero(buffor, sizeof(buffor));
             cin.getline(buffor, sizeof(buffor));
-            send(NrDesc, buffor, sizeof(buffor),0);
-            */
 
+            Sendall(NrDesc, buffor, sizeof(buffor));
+            
+/*
             for(NrDescSEND=0; NrDescSEND <= fdmax; NrDescSEND++)
             {
               if(FD_ISSET(NrDescSEND, &master) &&
                  NrDescSEND != DescL && NrDescSEND != NrDesc)
-                send(NrDescSEND, buffor, sizeof(buffor), 0);
-            }
+                if(Sendall(NrDescSEND, buffor, sizeof(buffor)))
+                   cout<<"Sended all"<<endl;
+            } */
           }
         }    
       }
